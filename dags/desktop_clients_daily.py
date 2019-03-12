@@ -5,8 +5,7 @@
 
 import datetime
 
-from airflow import models
-from airflow.contrib.operators.bigquery_operator import BigQueryOperator
+from .operators import MozBigQueryOperator
 
 with models.DAG(
     "clients_daily",
@@ -16,27 +15,37 @@ with models.DAG(
         "email": ["dthorn@mozilla.com", "dataops+alerts@mozilla.com"],
         "email_on_failure": True,
         "email_on_retry": False,
-        "depends_on_past": True,
+        "depends_on_past": False,
         # If a task fails, retry it once after waiting at least 5 minutes
         "retries": 0,
         "retry_delay": datetime.timedelta(minutes=5),
-        "project_id": models.Variable.get("gcp_project"),
     },
 ) as dag:
     clients_daily = BigQueryOperator(
         task_id="clients_daily",
         bql="sql/clients_daily_v7.sql",
         destination_dataset_table="analysis.clients_daily_v7${{ds_nodash}}",
-        write_disposition="WRITE_TRUNCATE",
-        use_legacy_sql=False,
+        query_params=[
+            {
+                "name": "submission_date",
+                "parameterType": {"type": "DATE"},
+                "parameterValue": {"value": "{{ds}}"},
+            }
+        ],
     )
 
     clients_last_seen = BigQueryOperator(
         task_id="clients_last_seen",
         bql="sql/clients_last_seen_v1.sql",
         destination_dataset_table="analysis.clients_last_seen_v1${{ds_nodash}}",
-        write_disposition="WRITE_TRUNCATE",
-        use_legacy_sql=False,
+        query_params=[
+            {
+                "name": "submission_date",
+                "parameterType": {"type": "DATE"},
+                "parameterValue": {"value": "{{ds}}"},
+            }
+        ],
+        depends_on_past=True,
     )
 
     clients_daily >> clients_last_seen
@@ -46,8 +55,13 @@ with models.DAG(
         bql="sql/firefox_desktop_exact_mau28_by_dimensions_v1.sql",
         destination_dataset_table="analysis."
         "firefox_desktop_exact_mau28_by_dimensions_v1${{ds_nodash}}",
-        write_disposition="WRITE_TRUNCATE",
-        use_legacy_sql=False,
+        query_params=[
+            {
+                "name": "submission_date",
+                "parameterType": {"type": "DATE"},
+                "parameterValue": {"value": "{{ds}}"},
+            }
+        ],
     )
 
     clients_last_seen >> exact_mau_by_dimensions
@@ -57,8 +71,13 @@ with models.DAG(
         bql="sql/firefox_desktop_exact_mau28_v1.sql",
         destination_dataset_table="analysis."
         "firefox_desktop_exact_mau28_v1${{ds_nodash}}",
-        write_disposition="WRITE_TRUNCATE",
-        use_legacy_sql=False,
+        query_params=[
+            {
+                "name": "submission_date",
+                "parameterType": {"type": "DATE"},
+                "parameterValue": {"value": "{{ds}}"},
+            }
+        ],
     )
 
     exact_mau_by_dimensions >> exact_mau
