@@ -211,7 +211,7 @@ def coerce_result(*elements: Any) -> Generator[Any, None, None]:
                 else next(coerce_result(value))
                 for key, value in element.items()
                 # drop generated_time column
-                if key not in ("generated_time",)
+                if key not in ("generated_time",) and value is not None
             }
         elif isinstance(element, (date, datetime)):
             yield element.isoformat()

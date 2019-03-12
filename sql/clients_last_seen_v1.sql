@@ -3,7 +3,7 @@ WITH current_sample AS (
     submission_date_s3 AS last_seen_date,
     * EXCEPT (submission_date_s3)
   FROM
-    clients_daily_v6
+    clients_daily_v7
   WHERE
     submission_date_s3 = @submission_date
 ), previous AS (
